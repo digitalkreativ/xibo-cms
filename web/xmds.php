@@ -180,6 +180,35 @@ if (isset($_GET['file'])) {
             } // Send via Nginx X-Accel-Redirect?
             else if ($sendFileMode == 'Nginx') {
                 header('X-Accel-Redirect: /download/' . $file->path);
+            } // Send via Php (readfile)
+            else if ($sendFileMode == 'Php') {
+
+                if(file_exists($app->configService->GetSetting('LIBRARY_LOCATION') . $file->path)){
+
+                    //Get file type and set it as Content Type
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    header('Content-Type: ' . finfo_file($finfo, $app->configService->GetSetting('LIBRARY_LOCATION') . $file->path));
+                    finfo_close($finfo);
+
+                    //Use Content-Disposition: attachment to specify the filename
+                    header('Content-Disposition: attachment; filename='.basename($app->configService->GetSetting('LIBRARY_LOCATION') . $file->path));
+
+                    //No cache
+                    header('Expires: 0');
+                    header('Cache-Control: must-revalidate');
+                    header('Pragma: public');
+
+                    //Define file size
+                    header('Content-Length: ' . filesize($app->configService->GetSetting('LIBRARY_LOCATION') . $file->path));
+
+                    ob_clean();
+                    flush();
+                    readfile($app->configService->GetSetting('LIBRARY_LOCATION') . $file->path);
+                } else {
+                    $app->logService->info('404 not found ' . $file->path );
+                    header('HTTP/1.0 404 Not Found');
+                }
+                
             } else {
                 header('HTTP/1.0 404 Not Found');
             }
